@@ -1,0 +1,198 @@
+{
+  "apiVersion": "v1",
+  "swaggerVersion": "1.2",
+  "basePath": "/apis",
+  "resourcePath": "access_points",
+  "apis": [
+    {
+      "path": "/access_points.json",
+      "operations": [
+        {
+          "summary": [
+            "",
+            "index"
+          ],
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            }
+          ],
+          "responseMessages": [
+            {
+              "code": 200,
+              "responseModel": "access_point_index",
+              "message": "Success"
+            }
+          ],
+          "nickname": "V1::AccessPoints#index",
+          "method": "get"
+        }
+      ]
+    },
+    {
+      "path": "/access_points/{id}.json",
+      "operations": [
+        {
+          "summary": [
+            "",
+            "show"
+          ],
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            },
+            {
+              "paramType": "path",
+              "name": "id",
+              "type": "integer",
+              "description": "Id",
+              "required": true
+            }
+          ],
+          "responseMessages": [
+            {
+              "code": 200,
+              "responseModel": "access_point_show",
+              "message": "Success"
+            }
+          ],
+          "nickname": "V1::AccessPoints#show",
+          "method": "get"
+        }
+      ]
+    }
+  ],
+  "authorizations": null,
+  "models": {
+    "access_point_index": {
+      "id": "access_point_index",
+      "required": [
+        "access_points"
+      ],
+      "properties": {
+        "access_points": {
+          "type": "array",
+          "description": "",
+          "items": {
+            "$ref": "access_point_show"
+          }
+        }
+      },
+      "description": "A list of access points"
+    },
+    "access_point_show": {
+      "id": "access_point_show",
+      "required": [
+        "bit_rates",
+        "bssid",
+        "channel",
+        "created_at",
+        "encryption",
+        "security_type",
+        "frequency",
+        "id",
+        "nb_test_ids",
+        "last_seen_ts",
+        "mode",
+        "protocol",
+        "ssid",
+        "updated_at"
+      ],
+      "properties": {
+        "bit_rates": {
+          "type": "string",
+          "description": ""
+        },
+        "bssid": {
+          "type": "string",
+          "description": ""
+        },
+        "channel": {
+          "type": "int",
+          "description": ""
+        },
+        "created_at": {
+          "type": "string",
+          "description": ""
+        },
+        "encryption": {
+          "type": "string",
+          "description": ""
+        },
+        "security_type": {
+          "type": "string",
+          "description": ""
+        },
+        "frequency": {
+          "type": "string",
+          "description": ""
+        },
+        "id": {
+          "type": "int",
+          "description": ""
+        },
+        "nb_test_ids": {
+          "type": "array",
+          "description": "",
+          "items": {
+            "$ref": "information_entities"
+          }
+        },
+        "last_seen_ts": {
+          "type": "date",
+          "description": ""
+        },
+        "mode": {
+          "type": "string",
+          "description": ""
+        },
+        "protocol": {
+          "type": "string",
+          "description": ""
+        },
+        "ssid": {
+          "type": "string",
+          "description": ""
+        },
+        "updated_at": {
+          "type": "date",
+          "description": ""
+        }
+      }
+    },
+    "information_entities": {
+      "id": "information_entities",
+      "required": [
+        "ie"
+      ],
+      "properties": {
+        "ie": {
+          "type": "string",
+          "description": ""
+        }
+      }
+    }
+  }
+}

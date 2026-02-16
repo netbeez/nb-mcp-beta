@@ -1,0 +1,282 @@
+{
+  "apiVersion": "v1",
+  "swaggerVersion": "1.2",
+  "basePath": "/apis",
+  "resourcePath": "nb_test_statistics",
+  "apis": [
+    {
+      "path": "/nb_test_statistics.json",
+      "operations": [
+        {
+          "summary": [
+            "",
+            "index"
+          ],
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            },
+            {
+              "paramType": "query",
+              "name": "nb_test_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "agent_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "nb_test_template_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "nb_target_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "window_size",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "granularity",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "last",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "from",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "to",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "metric_type",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "grouping",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "test_type_id",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "ts_order",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "sort_by",
+              "type": "string",
+              "description": "",
+              "required": false
+            }, 
+            {
+              "paramType": "query",
+              "name": "sort_by_order",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "value_operator",
+              "type": "string",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "value_watermark",
+              "type": "string",
+              "description": "",
+              "required": false
+            }
+          ],
+          "responseMessages": [
+            {
+              "code": 200,
+              "responseModel": "index_nb_test_statics",
+              "message": "Success"
+            }
+          ],
+          "nickname": "V1::NbTestStatistics#index",
+          "method": "get"
+        }
+      ]
+    },
+    {
+      "path": "/nb_test_statistics/{id}.json",
+      "operations": [
+        {
+          "summary": "",
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            },
+            {
+              "paramType": "query",
+              "name": "nb_test_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "nb_test_template_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "nb_target_id",
+              "type": "int",
+              "description": "",
+              "required": false
+            },
+            {
+              "paramType": "path",
+              "name": "id",
+              "type": "integer",
+              "description": "Id",
+              "required": true
+            }
+          ],
+          "nickname": "V1::NbTestStatistics#show",
+          "method": "get"
+        }
+      ]
+    }
+  ],
+  "authorizations": null,
+  "models": {
+    "index_nb_test_statics": {
+      "id": "index_nb_test_statics",
+      "required": [
+        "nb_test_statistics"
+      ],
+      "properties": {
+        "nb_test_statistics": {
+          "type": "array",
+          "description": "",
+          "items": {
+            "$ref": "nb_test_statistics_show"
+          }
+        }
+      }
+    },
+    "nb_test_statistics_show": {
+      "id": "nb_test_statistics_show",
+      "required": [
+        "datapoint_count",
+        "error_count",
+        "id",
+        "metric_type",
+        "nb_test_id",
+        "timestamp",
+        "value",
+        "window_size"
+      ],
+      "properties": {
+        "datapoint_count": {
+          "type": "integer",
+          "description": ""
+        },
+        "error_count": {
+          "type": "integer",
+          "description": ""
+        },
+        "id": {
+          "type": "integer",
+          "description": ""
+        },
+        "metric_type": {
+          "type": "string",
+          "description": ""
+        },
+        "nb_test_id": {
+          "type": "integer",
+          "description": ""
+        },
+        "timestamp": {
+          "type": "integer",
+          "description": ""
+        },
+        "value": {
+          "type": "float",
+          "description": ""
+        },
+        "window_size": {
+          "type": "integer",
+          "description": ""
+        }
+      }
+    }
+  }
+}

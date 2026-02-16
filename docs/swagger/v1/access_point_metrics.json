@@ -1,0 +1,215 @@
+{
+  "apiVersion": "v1",
+  "swaggerVersion": "1.2",
+  "basePath": "/apis",
+  "resourcePath": "access_point_metrics",
+  "apis": [
+    {
+      "path": "/access_point_metrics/sample.json",
+      "operations": [
+        {
+          "summary": "Returns a sample of metrics",
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            },
+            {
+              "paramType": "query",
+              "name": "agent_id",
+              "type": "int",
+              "description": null,
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "access_point_id",
+              "type": "int",
+              "description": null,
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "from",
+              "type": "integer",
+              "description": "start time",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "to",
+              "type": "integer",
+              "description": "end time",
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "cardinality",
+              "type": "integer",
+              "description": "cardinality",
+              "required": false
+            }
+          ],
+          "responseMessages": [
+            {
+              "code": 200,
+              "responseModel": "metrics_index",
+              "message": "Success"
+            }
+          ],
+          "nickname": "V1::AccessPointMetrics#sample",
+          "method": "get"
+        }
+      ]
+    },
+    {
+      "path": "/access_point_metrics.json",
+      "operations": [
+        {
+          "summary": [
+            "",
+            "index"
+          ],
+          "parameters": [
+            {
+              "paramType": "header",
+              "name": "Authorization",
+              "type": "string",
+              "description": "Authorization token",
+              "required": true
+            },
+            {
+              "paramType": "header",
+              "name": "API-VERSION",
+              "type": "string",
+              "description": null,
+              "required": true
+            },
+            {
+              "paramType": "query",
+              "name": "agent_id",
+              "type": "int",
+              "description": null,
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "access_point_id",
+              "type": "int",
+              "description": null,
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "from",
+              "type": "int",
+              "description": null,
+              "required": false
+            },
+            {
+              "paramType": "query",
+              "name": "to",
+              "type": "int",
+              "description": null,
+              "required": false
+            }
+          ],
+          "responseMessages": [
+            {
+              "code": 200,
+              "responseModel": "metrics_index",
+              "message": "Success"
+            }
+          ],
+          "nickname": "V1::AccessPointMetrics#index",
+          "method": "get"
+        }
+      ]
+    }
+  ],
+  "authorizations": null,
+  "models": {
+    "metrics_index": {
+      "id": "metrics_index",
+      "required": [
+        "metrics"
+      ],
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "description": "",
+          "items": {
+            "$ref": "metrics_show"
+          }
+        }
+      }
+    },
+    "metrics_show": {
+      "id": "metrics_show",
+      "required": [
+        "access_point_id",
+        "bit_rate",
+        "channel",
+        "id",
+        "link_quality",
+        "network_interface_id",
+        "rx_rate",
+        "signal_level",
+        "timestamp",
+        "tx_rate"
+      ],
+      "properties": {
+        "access_point_id": {
+          "type": "integer",
+          "description": ""
+        },
+        "bit_rate": {
+          "type": "integer",
+          "description": ""
+        },
+        "channel": {
+          "type": "integer",
+          "description": ""
+        },
+        "id": {
+          "type": "integer",
+          "description": ""
+        },
+        "link_quality": {
+          "type": "float",
+          "description": ""
+        },
+        "network_interface_id": {
+          "type": "integer",
+          "description": ""
+        },
+        "rx_rate": {
+          "type": "integer",
+          "description": ""
+        },
+        "signal_level": {
+          "type": "integer",
+          "description": ""
+        },
+        "timestamp": {
+          "type": "integer",
+          "description": ""
+        },
+        "tx_rate": {
+          "type": "integer",
+          "description": ""
+        }
+      }
+    }
+  }
+}
