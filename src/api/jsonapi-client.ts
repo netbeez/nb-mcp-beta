@@ -195,7 +195,6 @@ export class JsonApiClient extends BaseClient {
       params,
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
-        "Content-Type": "application/json",
       },
     });
   }
@@ -423,7 +422,7 @@ export class JsonApiClient extends BaseClient {
     return this.put<JsonApiResponse>(`/scheduled_nb_test_templates/${id}`, body, { beta: true });
   }
 
-  /** Run ad-hoc test. Uses Content-Type: application/json so the server parses the request body. */
+  /** Run ad-hoc test. */
   async runAdHocTest(body: unknown) {
     return this.request<JsonApiResponse>("/multiagent_nb_test_runs/ad_hoc", {
       method: "POST",
@@ -431,7 +430,6 @@ export class JsonApiClient extends BaseClient {
       params: this.buildParams({ beta: true }),
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
-        "Content-Type": "application/json",
       },
     });
   }

@@ -28,10 +28,12 @@ Both APIs are served from the same base URL (e.g. \`https://your-instance.netbee
 
 \`\`\`
 Authorization: Bearer <API_KEY>
-Content-Type: application/vnd.api+json
+Content-Type: application/json
 \`\`\`
 
 Most JSON:API endpoints also require the query parameter \`type=beta\`.
+
+**Note:** Although these endpoints follow the JSON:API \`{ data: { type, attributes, relationships } }\` payload shape, the beta server only parses request bodies when the \`Content-Type\` is \`application/json\` (not \`application/vnd.api+json\`).
 
 ### Legacy API Endpoints
 
@@ -193,11 +195,61 @@ For single-resource responses, \`data\` is an object instead of an array.
 | GET | \`/agents/:agent_id/logs/:id\` | Single log entry |
 | GET | \`/agents/:agent_id/access_point_connections\` | WiFi AP connection history |
 | GET | \`/agents/:agent_id/access_point_connections/:id\` | Single AP connection |
-| GET | \`/agents/:agent_id/performance_metrics\` | CPU, memory, disk usage over time |
+| GET | \`/agents/:agent_id/performance_metrics\` | CPU, memory, disk utilization over time |
 | GET | \`/agents/grouped_alert_counts\` | Alert counts grouped by agent |
 
 **Log filters:** \`event_code\`, \`ts\` (timestamp operator filter)
 **AP connection filters:** \`error_states\`, \`ts\`
+
+#### Agent Performance Metrics — \`GET /agents/:agent_id/performance_metrics\`
+
+Returns CPU, memory, and disk utilization samples for the agent over time. Use this to check whether an agent's hardware resources are stressed (which can affect monitoring accuracy) or for capacity-planning trends.
+
+**Filters:** \`ts\` (timestamp operator filter — same syntax as elsewhere in the JSON:API)
+
+**Pagination:** Standard JSON:API offset pagination (\`page[offset]\`, \`page[limit]\`).
+
+**Resource type:** \`agent_performance_metric\`
+
+**Attributes:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`ts\` | integer | Sample timestamp (Unix epoch milliseconds) |
+| \`cpu_utilization\` | number | CPU utilization at \`ts\` (percentage, 0–100) |
+| \`memory_utilization\` | number | Memory utilization at \`ts\` (percentage, 0–100) |
+| \`disk_utilization\` | number | Disk utilization at \`ts\` (percentage, 0–100) |
+
+**Relationships:** \`agent\` — the agent the sample belongs to.
+
+**Response shape:**
+
+\`\`\`json
+{
+  "data": [
+    {
+      "id": "<metric_id>",
+      "type": "agent_performance_metric",
+      "attributes": {
+        "ts": 1700000000000,
+        "cpu_utilization": 12.4,
+        "memory_utilization": 47.8,
+        "disk_utilization": 63.1
+      },
+      "relationships": {
+        "agent": {
+          "data": { "id": "<agent_id>", "type": "agent" }
+        }
+      }
+    }
+  ],
+  "meta": {
+    "page": { "offset": 1, "limit": 25, "total": 1440 }
+  }
+}
+\`\`\`
+
+That's the full payload — four attributes, an \`agent\` relationship, and standard pagination meta. No \`included\` block is returned by default.
 
 ---
 
@@ -315,8 +367,6 @@ For single-resource responses, \`data\` is an object instead of an array.
 |--------|------|-------------|
 | POST | \`/multiagent_nb_test_runs/ad_hoc\` | Run an ad-hoc test |
 | GET | \`/multiagent_nb_test_runs\` | Get test run status |
-
-**Note:** The POST uses \`Content-Type: application/json\` (not \`application/vnd.api+json\`).
 
 **GET filters:** \`multiagent_nb_test_runs\` (run ID)
 **GET includes:** \`results\`
@@ -461,23 +511,25 @@ Returns pre-aggregated test performance statistics over time. Best for analyzing
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| \`nb_test_id\` | integer | No | Filter by specific test ID |
-| \`agent_id\` | integer | No | Filter by agent ID |
-| \`nb_test_template_id\` | integer | No | Filter by test template ID |
-| \`nb_target_id\` | integer | No | Filter by target ID |
-| \`window_size\` | integer | No | Aggregation window size in seconds |
-| \`granularity\` | string | No | Aggregation granularity |
-| \`from\` | integer | No | Start time (Unix epoch milliseconds) |
-| \`to\` | integer | No | End time (Unix epoch milliseconds) |
-| \`last\` | integer | No | Return last N data points |
-| \`metric_type\` | string | No | Type of metric (avg, min, max, etc.) |
-| \`grouping\` | string | No | Grouping parameter for aggregation |
-| \`test_type_id\` | integer | No | Filter by test type ID |
-| \`ts_order\` | string | No | Timestamp ordering: asc or desc |
-| \`sort_by\` | string | No | Sort by field |
-| \`sort_by_order\` | string | No | Sort order: asc or desc |
-| \`value_operator\` | string | No | Value comparison operator for watermark filtering |
-| \`value_watermark\` | number | No | Watermark threshold value |
+| \`nb_test_id\` | integer | No | Single test instance ID (one agent + one template). Combinable with the other ID filters as an AND. |
+| \`agent_id\` | integer | No | Filter to tests run by this agent. Combinable with the other ID filters. |
+| \`nb_test_template_id\` | integer | No | Filter to all tests derived from this template (one test per agent assigned to the template). Combinable with the other ID filters. |
+| \`nb_target_id\` | integer | No | Filter to tests targeting this target (hostname/IP/URL). Combinable with the other ID filters. |
+| \`test_type_id\` | integer | No | Filter by test type — restricts to one class of tests (e.g. Ping, DNS, HTTP, Traceroute). |
+| \`window_size\` | integer | No | Aggregation bucket size **in seconds** (e.g. 60 = 1-minute, 300 = 5-minute, 3600 = 1-hour). Pass either \`window_size\` OR \`granularity\`, not both. |
+| \`granularity\` | string | No | Alternative aggregation control accepted by the upstream API; passed through verbatim. Use this OR \`window_size\`, not both. |
+| \`from\` | integer | No | Start of the time range (Unix epoch ms; the client also accepts seconds and ISO 8601 and normalizes to ms). Use together with \`to\`. **Mutually exclusive with \`last\`.** |
+| \`to\` | integer | No | End of the time range (Unix epoch ms; the client also accepts seconds and ISO 8601 and normalizes to ms). Use together with \`from\`. **Mutually exclusive with \`last\`.** |
+| \`last\` | integer | No | Return the most recent N data points. **Mutually exclusive with \`from\`/\`to\`.** |
+| \`metric_type\` | string | No | Which statistical view or derived metric to retrieve. One of \`mean\`, \`percentile_mean\`, \`stdev\`, \`jitter\`, \`mos\` (see "\`metric_type\` values" below). Omit to receive every type the matched test(s) produce. Determines the unit/scale of the row's \`value\`. |
+| \`grouping\` | string | No | Group result rows by the named field. Known value: \`nb_test_id\` (per-test breakdown — when scoped to a template, this yields one series per agent running the template). Other values are passed through to the upstream API. |
+| \`ts_order\` | string | No | Order rows by timestamp: \`asc\` (oldest first) or \`desc\` (newest first). |
+| \`sort_by\` | string | No | Field to sort the response by (e.g. a column from the row schema such as \`timestamp\` or \`value\`). Pair with \`sort_by_order\`. |
+| \`sort_by_order\` | string | No | Sort direction for \`sort_by\`: \`asc\` or \`desc\`. |
+| \`value_operator\` | string | No | Comparison operator used **together with \`value_watermark\`** to filter rows by their aggregated \`value\` (a watermark filter). Conventionally one of \`>\`, \`<\`, \`>=\`, \`<=\`, \`=\`. Has no effect unless \`value_watermark\` is also supplied. |
+| \`value_watermark\` | number | No | Threshold compared against each row's aggregated \`value\` using \`value_operator\` (e.g. \`value_operator=>\` + \`value_watermark=200\` returns only buckets whose value exceeds 200). Units match the row's \`metric_type\` (e.g. ms for latency-like metrics, 1.0–5.0 for \`mos\`). Has no effect unless \`value_operator\` is also supplied. |
+
+**Filter combinability:** ID filters (\`nb_test_id\`, \`agent_id\`, \`nb_test_template_id\`, \`nb_target_id\`, \`test_type_id\`) are AND-combined when more than one is supplied — they all narrow the same underlying set of tests.
 
 **Response:**
 
@@ -489,7 +541,7 @@ Returns pre-aggregated test performance statistics over time. Best for analyzing
       "nb_test_id": 100,
       "timestamp": 1700000000000,
       "value": 42.5,
-      "metric_type": "avg",
+      "metric_type": "mean",
       "window_size": 300,
       "datapoint_count": 60,
       "error_count": 0
@@ -506,10 +558,26 @@ Returns pre-aggregated test performance statistics over time. Best for analyzing
 | \`nb_test_id\` | integer | Associated test ID |
 | \`timestamp\` | integer | Unix epoch milliseconds |
 | \`value\` | float | Aggregated metric value |
-| \`metric_type\` | string | Type of aggregation applied |
+| \`metric_type\` | string | Which statistical view or derived metric this row represents — one of \`mean\`, \`percentile_mean\`, \`stdev\`, \`jitter\`, \`mos\`. One row per (window, \`metric_type\`). The unit/scale of \`value\` depends on this (e.g. \`mean\`/\`stdev\` of RTT in ms for Ping, \`mos\` on a 1–5 quality scale, \`jitter\` in ms). |
 | \`window_size\` | integer | Aggregation window in seconds |
 | \`datapoint_count\` | integer | Number of raw data points in this window |
 | \`error_count\` | integer | Number of errors in this window |
+
+**\`metric_type\` values:**
+
+For each test, the endpoint emits one row per \`metric_type\` per window. Five values are accepted (lowercase, exact strings):
+
+| Value | Meaning |
+|-------|---------|
+| \`mean\` | Arithmetic mean of the test's primary measurement within the window (e.g. RTT for Ping, lookup time for DNS, response time for HTTP). |
+| \`percentile_mean\` | Percentile-based mean of the same primary measurement (excludes outliers). |
+| \`stdev\` | Standard deviation of the same primary measurement, indicating variability. |
+| \`jitter\` | Jitter measurement (in ms). Only emitted by tests that produce jitter — VoIP tests, and Ping tests with the jitter option enabled. |
+| \`mos\` | Mean Opinion Score (1.0–5.0 voice-quality scale). Only emitted by tests that produce MOS — VoIP tests, and Ping tests with the MOS option enabled. |
+
+The query parameter \`metric_type\` filters the response to a single one of these. Omit it to receive every type the matched test(s) produce. The unit/scale of the row's \`value\` depends on which \`metric_type\` it is.
+
+> **Retrieving jitter or MOS:** call \`GET /nb_test_statistics.json\` scoped to a test that produces them — a VoIP test, or a Ping test with jitter/MOS enabled — using \`nb_test_id\`, \`nb_test_template_id\`, or \`test_type_id\`. Then either pass \`metric_type=jitter\` (or \`metric_type=mos\`) to filter, or omit \`metric_type\` and pick the rows whose \`metric_type\` field equals \`jitter\` / \`mos\` from the response. If the test doesn't produce that metric, no rows will be returned for it.
 
 **Single record:** \`GET /nb_test_statistics/{id}.json\` with optional filters: \`nb_test_id\`, \`nb_test_template_id\`, \`nb_target_id\`.
 

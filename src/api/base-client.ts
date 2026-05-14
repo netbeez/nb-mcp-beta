@@ -82,7 +82,7 @@ export class BaseClient {
         ...(fetchOptions.headers as Record<string, string>),
       };
       if (!mergedHeaders["Content-Type"]) {
-        mergedHeaders["Content-Type"] = "application/vnd.api+json";
+        mergedHeaders["Content-Type"] = "application/json";
       }
       fetchOptions.headers = mergedHeaders;
     }

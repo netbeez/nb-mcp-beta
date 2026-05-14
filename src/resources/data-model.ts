@@ -73,14 +73,14 @@ All available time-indexed data and how to query it:
 
 | Endpoint | Key Metrics | Filters |
 |----------|-------------|---------|
-| \`/nb_test_statistics.json\` | timestamp, value (avg/min/max), window_size, datapoint_count, error_count | nb_test_id, agent_id, nb_test_template_id, nb_target_id, granularity, grouping, watermark |
+| \`/nb_test_statistics.json\` | timestamp, value, metric_type (one of \`mean\`, \`percentile_mean\`, \`stdev\`, \`jitter\`, \`mos\` — \`jitter\`/\`mos\` only for VoIP, or Ping with jitter/MOS enabled), window_size, datapoint_count, error_count | nb_test_id, agent_id, nb_test_template_id, nb_target_id, metric_type, granularity, grouping, watermark |
 
 ### Agent Health Data
 
 | Type | Endpoint | Key Metrics | Filters |
 |------|----------|-------------|---------|
 | **Agent Statistics** | \`/nb_agent_statistics.json\` | timestamp, uptime, interval, window_size | agent_id (required), time range, window_size, last N |
-| **Performance Metrics** | \`/agents/{id}/performance_metrics\` | CPU usage, memory usage, disk usage | time range |
+| **Performance Metrics** | \`/agents/{id}/performance_metrics\` | \`ts\`, \`cpu_utilization\`, \`memory_utilization\`, \`disk_utilization\` | time range |
 | **Agent Logs** | \`/agents/{id}/logs\` | CONNECT/DISCONNECT events; wireless: wpa_supplicant, DHCP events | log type, time range |
 
 ### WiFi Data

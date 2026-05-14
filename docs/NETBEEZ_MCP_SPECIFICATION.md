@@ -192,7 +192,7 @@ The server uses two API clients to cover the full NetBeez API surface:
 
 | Client | Auth Scheme | Used For |
 |--------|-------------|----------|
-| **JSON:API Client** | `Authorization: Bearer <API_KEY>` + `Content-Type: application/vnd.api+json` | All entity CRUD and test results (31 of 33 tools) |
+| **JSON:API Client** | `Authorization: Bearer <API_KEY>` + `Content-Type: application/json` | All entity CRUD and test results (31 of 33 tools) |
 | **Legacy Client** | `Authorization: <API_KEY>` (no Bearer) + `API-VERSION: v1` | Statistics endpoints: `get_test_statistics`, `get_agent_statistics`, `get_access_point_metrics` |
 
 Both clients share a base client with retry logic (2 retries on 5xx with exponential backoff, no retry on 4xx) and structured error handling via `ApiError`.
@@ -258,7 +258,7 @@ Both clients share a base client with retry logic (2 retries on 5xx with exponen
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| **get_test_statistics** | Aggregated test performance statistics | `nb_test_id`, `agent_id`, `nb_test_template_id`, `nb_target_id`, `window_size`, `granularity`, `from`, `to`, `last`, `metric_type`, `grouping`, `test_type_id`, `ts_order`, `sort_by`, `sort_by_order`, `value_operator`, `value_watermark` |
+| **get_test_statistics** | Aggregated test performance statistics. `metric_type` selects which statistical view or derived metric to retrieve — one of `mean`, `percentile_mean`, `stdev`, `jitter`, `mos` (`jitter`/`mos` only for VoIP tests, or Ping tests with jitter/MOS enabled). | `nb_test_id`, `agent_id`, `nb_test_template_id`, `nb_target_id`, `window_size`, `granularity`, `from`, `to`, `last`, `metric_type`, `grouping`, `test_type_id`, `ts_order`, `sort_by`, `sort_by_order`, `value_operator`, `value_watermark` |
 | **get_agent_statistics** | Agent uptime/availability over time | `agent_id` (required), `from`, `to`, `window_size`, `last` |
 | **get_access_point_metrics** | WiFi signal quality metrics | `agent_id`, `access_point_id`, `from`, `to`, `cardinality` (triggers downsampled endpoint) |
 
