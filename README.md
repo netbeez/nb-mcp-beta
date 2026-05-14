@@ -4,9 +4,9 @@ A Model Context Protocol (MCP) server that connects LLM clients (Cursor, Claude 
 
 ## Features
 
-- **32 tools** for querying and managing agents, agent groups, targets, tests, scheduled test templates, alerts, incidents, WiFi profiles, statistics, path analysis, and running ad-hoc speed/VoIP/Iperf tests (including multiagent run status)
-- **3 contextual resources** providing the LLM with NetBeez data model knowledge, cross-agent correlation methodology, and troubleshooting workflows
-- **4 prompt templates** for common workflows: troubleshoot target, analyze agent health, investigate incident, network overview
+- **32 tools** for querying and managing agents, agent groups, targets, tests, scheduled test templates, alerts, incidents, WiFi profiles, statistics, path analysis, and running ad-hoc Iperf/speed/VoIP/custom command tests (including multiagent run status)
+- **5 resources** providing the LLM with NetBeez data model knowledge, cross-agent correlation methodology, troubleshooting workflows, full API reference, and ad-hoc test guidance
+- **5 prompt templates** for common workflows: troubleshoot target, analyze agent health, investigate incident, network overview, run ad-hoc tests
 - **Dual transport**: stdio (for Cursor/Claude Desktop) and HTTP (for remote clients)
 
 ## Quick Start (Recommended)
@@ -284,19 +284,21 @@ Then remove the `"netbeez"` entry from your MCP client config file(s).
 ### Ad-hoc & Other (3)
 | Tool | Description |
 |------|-------------|
-| `run_adhoc_test` | Run an on-demand speed test, VoIP test (agent-to-agent), or Iperf test (agent-to-agent or agent-to-server via IP/FQDN); returns multiagent run ID |
+| `run_adhoc_test` | Run an on-demand Iperf test (agent-to-agent or agent-to-server via IP/FQDN), network speed test, VoIP test (agent-to-agent), or custom command test (script on one or more agents); returns multiagent run ID |
 | `get_multiagent_test_run_status` | Get status and results of a multiagent test run by ID (use after `run_adhoc_test` to poll or retrieve results) |
 | `list_wifi_profiles` | List WiFi profiles and their incident status |
 
-## Resources (3)
+## Resources (5)
 
 | Resource | URI | Description |
 |----------|-----|-------------|
 | NetBeez Data Model | `netbeez://data-model` | Entity relationships, data shapes, timeseries data catalog |
 | Correlation Guide | `netbeez://correlation-guide` | Cross-agent correlation methodology, alert interpretation |
 | Troubleshooting Guide | `netbeez://troubleshooting-guide` | Step-by-step troubleshooting workflows |
+| API Reference | `netbeez://api-reference` | Comprehensive endpoint reference for JSON:API and legacy stats APIs |
+| Ad-hoc Tests Guide | `netbeez://ad-hoc-tests` | Ad-hoc Iperf/Speed/VoIP/Custom Command payloads, polling, and result parsing |
 
-## Prompts (4)
+## Prompts (5)
 
 | Prompt | Arguments | Description |
 |--------|-----------|-------------|
@@ -304,6 +306,7 @@ Then remove the `"netbeez"` entry from your MCP client config file(s).
 | `analyze-agent-health` | `agent_name` or `agent_id` | Comprehensive agent health check |
 | `investigate-incident` | `incident_id` | Deep dive into a specific incident |
 | `network-overview` | (none) | Overall network health summary |
+| `run-adhoc-test` | `test_type`, `agent_hint`, `destination_hint` | Guided ad-hoc execution flow for Iperf, Speed, VoIP, and Custom Command tests |
 
 ## Development
 
@@ -346,12 +349,15 @@ src/
 ├── resources/
 │   ├── data-model.ts         # Entity relationships and data shapes
 │   ├── correlation-guide.ts  # Cross-agent correlation patterns
-│   └── troubleshooting-guide.ts
+│   ├── troubleshooting-guide.ts
+│   ├── api-reference.ts      # API endpoint reference
+│   └── ad-hoc-tests.ts       # Ad-hoc tests payloads and result parsing guide
 └── prompts/
     ├── troubleshoot-target.ts
     ├── analyze-agent-health.ts
     ├── investigate-incident.ts
-    └── network-overview.ts
+    ├── network-overview.ts
+    └── run-adhoc-test.ts
 ```
 
 ## API Coverage

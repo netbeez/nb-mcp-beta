@@ -368,8 +368,56 @@ That's the full payload — four attributes, an \`agent\` relationship, and stan
 | POST | \`/multiagent_nb_test_runs/ad_hoc\` | Run an ad-hoc test |
 | GET | \`/multiagent_nb_test_runs\` | Get test run status |
 
-**GET filters:** \`multiagent_nb_test_runs\` (run ID)
+**GET filters:** \`multiagent_nb_test_runs\` (run ID)  
 **GET includes:** \`results\`
+
+**Supported ad-hoc test types:**
+
+| test_type_id | Name | Execution model | Required specifics |
+|--------------|------|-----------------|--------------------|
+| 5 | Iperf | Agent-to-agent OR agent-to-server | Exactly one of destination_agent_id or target (IP/FQDN) |
+| 7 | Network Speed | One or many agents to provider | \`speedtest_type\`: 1=ookla, 2=ndt, 3=fast.com, 4=cloudflare |
+| 8 | VoIP | Agent-to-agent only | destination_agent_id |
+| 11 | Custom Command | Script runs on one or many agents | \`custom_command\` shebang + \`output_schema\` |
+
+**Create payload shape:**
+
+\`\`\`json
+{
+  "data": {
+    "type": "multiagent_nb_test_run",
+    "attributes": {
+      "schedule_type": "ad_hoc"
+    },
+    "relationships": {
+      "agents": {
+        "data": [{ "id": 3646, "type": "agent" }]
+      },
+      "test_type": {
+        "data": { "id": 7, "type": "test_type" }
+      }
+    }
+  }
+}
+\`\`\`
+
+**Per-test attributes to add under \`data.attributes\`:**
+- Iperf (5): \`target_is_agent\` (destination agent) **or** \`target\` + \`target_is_agent: 0\` (server), plus optional iperf settings (\`iperf_type\`, \`iperf_time\`, \`iperf_port\`, etc.)
+- Network Speed (7): \`speedtest_type\` (2=NDT, 3=fast.com, 4=cloudflare, 1=ookla), optional \`target\` (usually empty string)
+- VoIP (8): \`target_is_agent\` destination agent ID
+- Custom Command (11): \`custom_command\` starting with \`#!/usr/bin/env bash\` or \`#!/usr/bin/env python\`, plus \`output_schema\` array (e.g. \`[{ "metric": "value", "unit": "int" }]\`)
+
+**Polling pattern:**
+
+\`\`\`
+GET /multiagent_nb_test_runs?filter[multiagent_nb_test_runs]=<run_id>&include=results
+\`\`\`
+
+Poll until \`data[0].attributes.state\` is \`completed\`, \`failed\`, or \`error\`.
+
+Per-agent results are returned in \`included[]\` resources of type \`scheduled_nb_test_result\`, with metrics in \`attributes.result_values\` and agent mapping in \`relationships.agent.data.id\`.
+
+For the full guide with detailed payload examples, see resource \`netbeez://ad-hoc-tests\`.
 
 ---
 

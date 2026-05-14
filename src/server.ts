@@ -50,6 +50,13 @@ import {
   API_REFERENCE_MIME,
   API_REFERENCE_CONTENT,
 } from "./resources/api-reference.js";
+import {
+  AD_HOC_TESTS_URI,
+  AD_HOC_TESTS_NAME,
+  AD_HOC_TESTS_DESCRIPTION,
+  AD_HOC_TESTS_MIME,
+  AD_HOC_TESTS_CONTENT,
+} from "./resources/ad-hoc-tests.js";
 
 // Prompts
 import { z } from "zod";
@@ -57,6 +64,7 @@ import { TROUBLESHOOT_TARGET_PROMPT } from "./prompts/troubleshoot-target.js";
 import { ANALYZE_AGENT_HEALTH_PROMPT } from "./prompts/analyze-agent-health.js";
 import { INVESTIGATE_INCIDENT_PROMPT } from "./prompts/investigate-incident.js";
 import { NETWORK_OVERVIEW_PROMPT } from "./prompts/network-overview.js";
+import { RUN_ADHOC_TEST_PROMPT } from "./prompts/run-adhoc-test.js";
 
 export function createServer(config: Config): McpServer {
   const server = new McpServer(
@@ -170,6 +178,16 @@ export function createServer(config: Config): McpServer {
     ],
   }));
 
+  server.resource(AD_HOC_TESTS_NAME, AD_HOC_TESTS_URI, { description: AD_HOC_TESTS_DESCRIPTION, mimeType: AD_HOC_TESTS_MIME }, async () => ({
+    contents: [
+      {
+        uri: AD_HOC_TESTS_URI,
+        mimeType: AD_HOC_TESTS_MIME,
+        text: AD_HOC_TESTS_CONTENT,
+      },
+    ],
+  }));
+
   // ──────────────────────────────────────────────
   // Register Prompts (4 workflow templates)
   // ──────────────────────────────────────────────
@@ -214,6 +232,19 @@ export function createServer(config: Config): McpServer {
     NETWORK_OVERVIEW_PROMPT.description,
     (extra) => ({
       messages: NETWORK_OVERVIEW_PROMPT.messages(),
+    })
+  );
+
+  server.prompt(
+    RUN_ADHOC_TEST_PROMPT.name,
+    RUN_ADHOC_TEST_PROMPT.description,
+    {
+      test_type: z.string().optional().describe("Test type hint: iperf, speed, voip, or custom_command"),
+      agent_hint: z.string().optional().describe("Source agent hint (name, ID, or phrase)"),
+      destination_hint: z.string().optional().describe("Destination hint for iperf/voip"),
+    },
+    (args) => ({
+      messages: RUN_ADHOC_TEST_PROMPT.messages(args),
     })
   );
 

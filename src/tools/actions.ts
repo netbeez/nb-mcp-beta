@@ -1,5 +1,5 @@
 /**
- * Action tools — run_adhoc_test (Network Speed Test, VoIP, and Iperf)
+ * Action tools — run_adhoc_test (Iperf, Network Speed, VoIP, Custom Command)
  */
 
 import { z } from "zod";
@@ -16,10 +16,13 @@ const TEST_TYPE_MAP: Record<string, string> = {
   "5": "5",
   "7": "7",
   "8": "8",
+  "11": "11",
   iperf: "5",
   speed: "7",
   speedtest: "7",
   voip: "8",
+  custom: "11",
+  custom_command: "11",
 };
 /** Map human-readable speed test type to API id (1=Ookla, 2=NDT, 3=fast.com, 4=Cloudflare). */
 const SPEEDTEST_TYPE_MAP: Record<string, string> = {
@@ -68,23 +71,35 @@ export function registerActionTools(server: McpServer, client: JsonApiClient) {
   // ─── run_adhoc_test ─────────────────────────────────────
   server.tool(
     "run_adhoc_test",
-    `Run an ad-hoc network test on one or more agents. IMPORTANT: Only Iperf, Network Speed, and VoIP tests are supported — ping/dns/http/traceroute cannot be run ad-hoc via the API.
+    `Run an ad-hoc test on one or more agents. Supported test types are Iperf (5), Network Speed (7), VoIP (8), and Custom Command (11). Ping/DNS/HTTP/Traceroute cannot be run ad-hoc via this endpoint.
 
 Creates the test run and polls until completion. Returns the multiagent_nb_test_run_id; after running, use get_multiagent_test_run_status with that ID to check status or retrieve results (e.g. if this tool times out or you need to re-check later).
 
-• test_type: use "iperf" (or "5"), "speed"/"speedtest" (or "7"), or "voip" (or "8").
+• test_type: use "iperf" (or "5"), "speed"/"speedtest" (or "7"), "voip" (or "8"), or "custom"/"custom_command" (or "11").
 • speedtest_type (for Network Speed only): use "ookla", "ndt", "fast", or "cloudflare" (or "1","2","3","4").
 • Iperf: provide either destination_agent_id (agent-to-agent) or target (destination IP or FQDN for agent-to-server; not a NetBeez target entity).
-• VoIP: agent-to-agent only; destination_agent_id required.`,
+• VoIP: agent-to-agent only; destination_agent_id required.
+• Custom Command: provide custom_command (script body with shebang) and output_schema (array of { metric, unit }); no destination is needed.`,
     {
       agent_ids: z
         .array(z.number())
         .min(1)
         .describe("Agent IDs to run the test on (at least one)"),
       test_type_id: z
-        .enum(["5", "7", "8", "iperf", "speed", "speedtest", "voip"])
+        .enum([
+          "5",
+          "7",
+          "8",
+          "11",
+          "iperf",
+          "speed",
+          "speedtest",
+          "voip",
+          "custom",
+          "custom_command",
+        ])
         .describe(
-          "Test type. Words: iperf (5), speed or speedtest (7), voip (8). Numbers: 5, 7, 8."
+          "Test type. Words: iperf (5), speed or speedtest (7), voip (8), custom or custom_command (11). Numbers: 5, 7, 8, 11."
         ),
       speedtest_type: z
         .enum([
@@ -146,6 +161,23 @@ Creates the test run and polls until completion. Returns the multiagent_nb_test_
         .number()
         .optional()
         .describe("Bandwidth limit in Mbps, UDP only (optional)"),
+      custom_command: z
+        .string()
+        .optional()
+        .describe(
+          "Custom command script body for test_type 11. Must start with #!/usr/bin/env bash or #!/usr/bin/env python."
+        ),
+      output_schema: z
+        .array(
+          z.object({
+            metric: z.string(),
+            unit: z.string(),
+          })
+        )
+        .optional()
+        .describe(
+          "Custom command metrics schema for test_type 11. Array of { metric, unit } entries matching script output keys."
+        ),
     },
     async (params) => {
       // Normalize human-readable values to API numeric IDs
@@ -254,6 +286,45 @@ Creates the test run and polls until completion. Returns the multiagent_nb_test_
         attrs.target_is_agent = normalizedParams.destination_agent_id;
       }
 
+      if (testTypeId === 11) {
+        if (!normalizedParams.custom_command) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: custom_command (script body) is required for Custom Command tests (test_type_id 11).",
+              },
+            ],
+          };
+        }
+        const command = normalizedParams.custom_command.trimStart();
+        if (
+          !command.startsWith("#!/usr/bin/env bash") &&
+          !command.startsWith("#!/usr/bin/env python")
+        ) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: custom_command must start with '#!/usr/bin/env bash' or '#!/usr/bin/env python'.",
+              },
+            ],
+          };
+        }
+        if (!normalizedParams.output_schema || normalizedParams.output_schema.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: output_schema (array of { metric, unit }) is required for Custom Command tests (test_type_id 11).",
+              },
+            ],
+          };
+        }
+        attrs.custom_command = command;
+        attrs.output_schema = normalizedParams.output_schema;
+      }
+
       if (testTypeId === 7 && !normalizedParams.speedtest_type) {
         attrs.speedtest_type = 2;
       }
@@ -266,7 +337,7 @@ Creates the test run and polls until completion. Returns the multiagent_nb_test_
         if (attrs.server === undefined) attrs.server = null;
         if (attrs.mini_server === undefined) attrs.mini_server = null;
         if (normalizedParams.secure !== undefined) attrs.secure = normalizedParams.secure;
-      } else if (normalizedParams.target && testTypeId !== 8) {
+      } else if (normalizedParams.target && testTypeId !== 8 && testTypeId !== 11) {
         attrs.target = normalizedParams.target;
       }
       if (normalizedParams.secure !== undefined && testTypeId !== 7) {

@@ -96,6 +96,7 @@ All available time-indexed data and how to query it:
 | Endpoint | Key Metrics | Filters |
 |----------|-------------|---------|
 | \`/scheduled_nb_test_templates/{id}/results\` | Iperf/Speed/VoIP key-value results (download_speed, upload_speed, latency, jitter, MOS) | agent, time range |
+| \`/multiagent_nb_test_runs?filter[multiagent_nb_test_runs]={run_id}&include=results\` | Ad-hoc per-agent \`scheduled_nb_test_result\` records with \`result_values\` array (\`[{ key, value }]\`) plus \`severity\` and \`error_message\` | multiagent_nb_test_runs (run ID), include=results |
 
 ---
 
