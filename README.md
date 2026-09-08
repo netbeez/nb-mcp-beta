@@ -25,6 +25,22 @@ The installer will prompt you for:
 
 The script is idempotent — re-run it any time to update to the latest version or change your configuration.
 
+## Quick Start (Windows)
+
+Run the one-line installer from PowerShell — it handles everything: Node.js, dependencies, build, credentials, and MCP client configuration:
+
+```powershell
+irm https://raw.githubusercontent.com/netbeez/nb-mcp-server/main/install.ps1 | iex
+```
+
+The installer will prompt you for the same values as the Unix installer (instance URL, API key, SSL preference, and which MCP clients to configure). It is idempotent — re-run it any time to update or change your configuration.
+
+If execution policy blocks a local run, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
 ### Development install (no git push required)
 
 From a clone of this repo, run the installer with `--dev` to point Cursor, Claude Desktop, Codex, Windsurf, and Kiro at your local build:
@@ -35,7 +51,12 @@ From a clone of this repo, run the installer with `--dev` to point Cursor, Claud
 bash ~/path/to/nb-mcp-server/install.sh --dev
 ```
 
-Do **not** use `cat install.sh | bash` — that way the script receives no arguments and `--dev` is ignored.
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\install.ps1 --dev
+```
+
+Do **not** use `cat install.sh | bash` or `irm install.ps1 | iex` for development mode — those invocations receive no `--dev` flag and will download to the default install directory.
 
 This skips cloning; it uses the current directory, runs `npm install` and `npm run build`, then configures the same MCP clients to use `./dist/index.js`. After making changes, run `npm run build` and restart the client — no need to push to git to test.
 
@@ -43,8 +64,8 @@ This skips cloning; it uses the current directory, runs `npm install` and `npm r
 
 | Step | Detail |
 |------|--------|
-| Node.js | Checks for Node.js 18+; installs via Homebrew, apt, or nvm if missing |
-| Download | Downloads the latest source from GitHub (no git required) and extracts to `~/.netbeez-mcp` |
+| Node.js | Checks for Node.js 18+; installs via Homebrew, apt, or nvm (macOS/Linux) or winget (Windows) if missing |
+| Download | Downloads the latest source from GitHub (no git required) and extracts to `~/.netbeez-mcp` (`%USERPROFILE%\.netbeez-mcp` on Windows) |
 | Build | Runs `npm install` and `npm run build` |
 | Configure | Prompts for credentials and writes `~/.netbeez-mcp/.env` |
 | MCP clients | Merges the server entry into Cursor / Claude Desktop / Windsurf / Codex / Kiro config |
@@ -57,7 +78,7 @@ If you prefer to install manually, you'll need:
 - A NetBeez BeezKeeper instance with API access
 - An API key (Dashboard → Settings → API Keys)
 
-The one-line installer only requires Node.js 18+ and curl (no git).
+The one-line installer only requires Node.js 18+ and curl (macOS/Linux) or PowerShell 5.1+ (Windows). No git required.
 
 ## Manual Installation
 
@@ -95,7 +116,7 @@ npm start
 
 ### Cursor
 
-Add to your Cursor MCP settings (`~/.cursor/mcp.json`):
+Add to your Cursor MCP settings (`~/.cursor/mcp.json` on macOS/Linux, `$env:USERPROFILE\.cursor\mcp.json` on Windows):
 
 ```json
 {
@@ -114,7 +135,7 @@ Add to your Cursor MCP settings (`~/.cursor/mcp.json`):
 
 ### Claude Desktop
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `~/.config/Claude/claude_desktop_config.json` on Linux, `$env:APPDATA\Claude\claude_desktop_config.json` on Windows):
 
 ```json
 {
@@ -133,7 +154,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 ### Windsurf
 
-Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
+Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json` on macOS/Linux, `$env:USERPROFILE\.codeium\windsurf\mcp_config.json` on Windows):
 
 ```json
 {
@@ -152,26 +173,21 @@ Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
 
 ### Codex
 
-Add to your Codex config (`~/.codex/config.json`):
+Add to your Codex config (`~/.codex/config.toml` on macOS/Linux, `$env:USERPROFILE\.codex\config.toml` on Windows):
 
-```json
-{
-  "mcpServers": {
-    "netbeez": {
-      "command": "node",
-      "args": ["~/.netbeez-mcp/dist/index.js"],
-      "env": {
-        "NETBEEZ_BASE_URL": "https://your-instance.netbeezcloud.net",
-        "NETBEEZ_API_KEY": "your-api-key-here"
-      }
-    }
-  }
-}
+```toml
+[mcp_servers.netbeez]
+command = "node"
+args = ["~/.netbeez-mcp/dist/index.js"]
+
+[mcp_servers.netbeez.env]
+NETBEEZ_BASE_URL = "https://your-instance.netbeezcloud.net"
+NETBEEZ_API_KEY = "your-api-key-here"
 ```
 
 ### Kiro
 
-Add to your Kiro user MCP config (`~/.kiro/settings/mcp.json`):
+Add to your Kiro user MCP config (`~/.kiro/settings/mcp.json` on macOS/Linux, `$env:USERPROFILE\.kiro\settings\mcp.json` on Windows):
 
 ```json
 {
@@ -190,7 +206,7 @@ Add to your Kiro user MCP config (`~/.kiro/settings/mcp.json`):
 
 Kiro also supports workspace-level MCP config at `.kiro/settings/mcp.json`.
 
-> **Tip:** The installer (`curl | bash` above) writes these config files automatically.
+> **Tip:** The installer (`curl | bash` or `irm | iex` above) writes these config files automatically.
 
 ## Updating
 
@@ -198,6 +214,10 @@ Re-run the installer to pull the latest version and rebuild:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/netbeez/nb-mcp-server/main/install.sh | bash
+```
+
+```powershell
+irm https://raw.githubusercontent.com/netbeez/nb-mcp-server/main/install.ps1 | iex
 ```
 
 Your existing credentials will be shown as defaults — press Enter to keep them.
@@ -208,6 +228,10 @@ If you installed with `--dev`, run `npm run build` in the repo and restart your 
 
 ```bash
 rm -rf ~/.netbeez-mcp
+```
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.netbeez-mcp"
 ```
 
 Then remove the `"netbeez"` entry from your MCP client config file(s).

@@ -201,6 +201,7 @@ detect_os() {
   case "$(uname -s)" in
     Darwin*) OS="macos" ;;
     Linux*)  OS="linux" ;;
+    MINGW*|MSYS*|CYGWIN*) error "Use install.ps1 for Windows (PowerShell)."; exit 1 ;;
     *)       error "Unsupported OS: $(uname -s)"; exit 1 ;;
   esac
 }
