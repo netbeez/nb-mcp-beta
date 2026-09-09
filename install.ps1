@@ -367,6 +367,47 @@ function Write-NodeDownloadHelp {
     exit 1
 }
 
+function Install-NodeFromMsi {
+    Write-Info 'Downloading official Node.js LTS MSI (winget is unavailable or failed)…'
+
+    $indexUrl = 'https://nodejs.org/dist/index.json'
+    try {
+        $releases = Invoke-RestMethod -Uri $indexUrl
+    } catch {
+        Write-NodeDownloadHelp -Reason 'Could not fetch the Node.js release index.'
+    }
+
+    $lts = $releases | Where-Object { $_.lts } | Select-Object -First 1
+    if (-not $lts) {
+        Write-NodeDownloadHelp -Reason 'Could not determine the current Node.js LTS version.'
+    }
+
+    $version = [string]$lts.version
+    $arch = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
+    $msiUrl = "https://nodejs.org/dist/$version/node-$version-$arch.msi"
+    $msiPath = Join-Path $env:TEMP ("node-" + $version + "-$arch.msi")
+
+    Write-Info "Fetching $msiUrl"
+    try {
+        Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath -UseBasicParsing
+    } catch {
+        Write-NodeDownloadHelp -Reason "Failed to download Node.js MSI from $msiUrl"
+    }
+
+    Write-Info 'Installing Node.js silently via msiexec…'
+    $proc = Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', $msiPath, '/qn', '/norestart') -Wait -PassThru
+    if ($proc.ExitCode -ne 0) {
+        Write-NodeDownloadHelp -Reason "msiexec exited with code $($proc.ExitCode)."
+    }
+
+    Update-SessionPath
+    $script:NodeExe = Get-NodePath
+    if (-not $script:NodeExe) {
+        Write-NodeDownloadHelp -Reason 'Node.js MSI installed but node.exe was not found on PATH.'
+    }
+    Write-Ok "Node.js $(& $script:NodeExe --version) installed"
+}
+
 function Install-Node {
     Write-Info "Node.js $MinNodeMajor+ is required. Attempting to install…"
 
@@ -376,15 +417,16 @@ function Install-Node {
         & $winget.Source install --id OpenJS.NodeJS.LTS -e --source winget --accept-package-agreements --accept-source-agreements
         Update-SessionPath
         $script:NodeExe = Get-NodePath
-        if (-not $script:NodeExe) {
-            Write-NodeDownloadHelp -Reason 'Failed to install Node.js via winget.'
+        if ($script:NodeExe) {
+            Write-Ok "Node.js $(& $script:NodeExe --version) installed"
+            return
         }
-        Write-Ok "Node.js $(& $script:NodeExe --version) installed"
-        return
+        Write-Warn 'winget did not leave a usable Node.js binary. Falling back to the official MSI.'
+    } else {
+        Write-Warn 'winget is not available. Falling back to the official MSI.'
     }
 
-    Write-Warn 'winget is not available.'
-    Write-NodeDownloadHelp
+    Install-NodeFromMsi
 }
 
 function Test-Node {
@@ -512,18 +554,31 @@ function Build-Server {
 
     Push-Location $script:InstallDir
     try {
-        $installOut = & $npm install --no-fund --no-audit 2>&1
-        $installExit = $LASTEXITCODE
-        $installOut | Select-Object -Last 1
+        # PS 5.1 + $ErrorActionPreference=Stop treats native stderr as terminating
+        # errors. npm writes routine "npm notice" lines to stderr.
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $installOut = & $npm install --no-fund --no-audit 2>&1
+            $installExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $prevEap
+        }
+        $installOut | ForEach-Object { "$_" } | Select-Object -Last 1
         if ($installExit -ne 0) {
             Write-Err 'npm install failed.'
             exit 1
         }
         Write-Ok 'Dependencies installed'
 
-        $buildOut = & $npm run build 2>&1
-        $buildExit = $LASTEXITCODE
-        $buildOut | Select-Object -Last 1
+        $ErrorActionPreference = 'Continue'
+        try {
+            $buildOut = & $npm run build 2>&1
+            $buildExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $prevEap
+        }
+        $buildOut | ForEach-Object { "$_" } | Select-Object -Last 1
         if ($buildExit -ne 0) {
             Write-Err 'npm run build failed.'
             exit 1
@@ -621,6 +676,26 @@ MCP_TRANSPORT=stdio
 # ConvertTo-Json in Windows PowerShell 5.1 collapses single-element arrays,
 # which would break MCP `args: ["…/dist/index.js"]`.
 
+# Temp file + env vars: avoids `node -e` quoting issues under `irm | iex` and PS 5.1.
+# argv[1] is the temp script itself (unlike `node -e`, where the first extra arg is argv[1]).
+function Invoke-NodeScriptFile {
+    param(
+        [string]$JavaScript,
+        [string[]]$ArgumentList = @()
+    )
+    $tmpJs = Join-Path $env:TEMP ("nb-mcp-" + [guid]::NewGuid().ToString('N') + '.js')
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tmpJs, $JavaScript, $utf8NoBom)
+    try {
+        & $script:NodeExe $tmpJs @ArgumentList
+        return $LASTEXITCODE
+    } finally {
+        if (Test-Path -LiteralPath $tmpJs) {
+            Remove-Item -LiteralPath $tmpJs -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Write-McpConfig {
     param([string]$ConfigFile)
 
@@ -635,13 +710,13 @@ function Write-McpConfig {
     $prevKey = $env:_NB_KEY
     $env:_NB_KEY = $script:NbKey
     try {
-        & $script:NodeExe -e @'
+        $js = @'
 const fs = require("fs");
-const configPath = process.argv[1];
-const installDir = process.argv[2];
-const baseUrl = process.argv[3];
+const configPath = process.argv[2];
+const installDir = process.argv[3];
+const baseUrl = process.argv[4];
 const apiKey = process.env._NB_KEY;
-const sslVerify = process.argv[4];
+const sslVerify = process.argv[5];
 
 let config = {};
 try {
@@ -667,8 +742,9 @@ config.mcpServers.netbeez = {
 };
 
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-'@ $configPath $installDir $script:NbUrl $script:NbSsl
-        if ($LASTEXITCODE -ne 0) {
+'@
+        $code = Invoke-NodeScriptFile -JavaScript $js -ArgumentList @($configPath, $installDir, $script:NbUrl, $script:NbSsl)
+        if ($code -ne 0) {
             Write-Err "Failed to write MCP config: $ConfigFile"
             exit 1
         }
@@ -714,13 +790,13 @@ function Write-CodexConfig {
     $prevKey = $env:_NB_KEY
     $env:_NB_KEY = $script:NbKey
     try {
-        & $script:NodeExe -e @'
+        $js = @'
 const fs = require("fs");
-const path = process.argv[1];
-const dir = process.argv[2];
-const url = process.argv[3];
+const path = process.argv[2];
+const dir = process.argv[3];
+const url = process.argv[4];
 const key = process.env._NB_KEY;
-const ssl = process.argv[4];
+const ssl = process.argv[5];
 
 let lines = [];
 try { lines = fs.readFileSync(path, "utf8").split("\n"); } catch (_) {}
@@ -751,8 +827,9 @@ if (ssl === "false") {
 out.push("");
 
 fs.writeFileSync(path, out.join("\n"));
-'@ $configPath $installDir $script:NbUrl $script:NbSsl
-        if ($LASTEXITCODE -ne 0) {
+'@
+        $code = Invoke-NodeScriptFile -JavaScript $js -ArgumentList @($configPath, $installDir, $script:NbUrl, $script:NbSsl)
+        if ($code -ne 0) {
             Write-Err "Failed to write Codex config: $configFile"
             exit 1
         }
